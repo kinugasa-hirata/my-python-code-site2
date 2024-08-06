@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Code Sharing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/default.min.css">
+    <script>hljs.highlightAll();</script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        pre {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Python Code for Data Processing and Excel Export</h1>
+    <p>This code processes text files, extracts numerical data, and exports it to an Excel spreadsheet.</p>
+    <pre><code class="language-python">
+from google.colab import files
+from openpyxl import load_workbook
+import os
+
+# Placeholder for the extracted data
+all_extracted_data = {}
+selected_data = []
+selected_indices = [103, 99, 177, 158, "", "", 114, 182, 193, 79, 148, 174]
+
+def extract_numerical_data(file_path):
+    numerical_data = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            values = line.split(';')
+            for value in values:
+                try:
+                    numeric_value = round(abs(float(value)), 2)
+                    numerical_data.append(numeric_value)
+                except ValueError:
+                    pass
+    return numerical_data
+
+def select_data():
+    global selected_data
+    selected_data = []
+    for file_title, data in all_extracted_data.items():
+        selected_values = []
+        for index in selected_indices:
+            if index == "":
+                selected_values.append("")
+            elif index <= len(data['data']):
+                selected_values.append(round(abs(data['data'][index - 1]), 2))
+            else:
+                selected_values.append("")
+        selected_data.append({'file_title': os.path.splitext(os.path.basename(file_title))[0], 'selected_values': selected_values})
+    display_selected_data()
+
+def display_selected_data():
+    for item in selected_data:
+        print(f"File: {item['file_title']}, Selected Values: {item['selected_values']}")
+
+def load_data():
+    global file_titles
+
+    uploaded_files = files.upload()
+
+    file_paths = list(uploaded_files.keys())
+    file_titles = [os.path.basename(file_path) for file_path in file_paths]
+
+    for file_path in file_paths:
+        with open(file_path, 'w') as f:
+            f.write(uploaded_files[file_path].decode())
+
+        numerical_data = extract_numerical_data(file_path)
+        if numerical_data:
+            all_extracted_data[file_path] = {"data": numerical_data}
+
+    select_data()
+
+def export_to_excel():
+    uploaded = files.upload()
+
+    if uploaded:
+        file_path = list(uploaded.keys())[0]
+
+        try:
+            wb = load_workbook(file_path)
+            ws = wb.active
+
+            current_row = 17
+
+            for item in selected_data:
+                current_row += 1
+                ws.cell(row=current_row, column=1).value = item['file_title']
+                for index, value in enumerate(item['selected_values'], start=1):
+                    ws.cell(row=current_row, column=index + 1).value = value
+
+            wb.save(file_path)
+
+            files.download(file_path)
+            print("Export Successful: Data has been exported to Excel.")
+
+        except Exception as e:
+            print(f"Export Error: An error occurred during export:\n{str(e)}")
+
+# To call the functions
+load_data()
+export_to_excel()
+    </code></pre>
+</body>
+</html>
